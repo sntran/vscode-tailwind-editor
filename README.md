@@ -1,6 +1,6 @@
-# vscode-tailwind README
+# vscode-tailwind-play
 
-This is the README for your extension "vscode-tailwind". After writing up a brief description, we recommend including the following sections.
+Tailwind Playground/Editor in VSCode.
 
 ## Features
 

@@ -1,5 +1,5 @@
 {
-  "name": "@brandextract/vscode-tailwind",
+  "name": "vscode-tailwind-play",
   "displayName": "Tailwind VSCode Editor",
   "description": "Tailwind Playground/Editor in VSCode",
   "version": "0.0.1",

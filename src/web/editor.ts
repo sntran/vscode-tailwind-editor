@@ -37,14 +37,16 @@ export class TailwindEditorProvider implements vscode.CustomTextEditorProvider {
     webviewPanel: vscode.WebviewPanel,
     _token: vscode.CancellationToken
   ): Promise<void> {
+    const webview = webviewPanel.webview;
+
     // Setup initial content for the webview
-    webviewPanel.webview.options = {
+    webview.options = {
       enableScripts: true,
     };
-    webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
+    webview.html = this.getHtmlForWebview(webview, document);
 
     function updateWebview() {
-      webviewPanel.webview.postMessage({
+      webview.postMessage({
         type: 'update',
         text: document.getText(),
       });
@@ -69,7 +71,7 @@ export class TailwindEditorProvider implements vscode.CustomTextEditorProvider {
     });
 
     // Receive message from the webview.
-    webviewPanel.webview.onDidReceiveMessage(e => {
+    webview.onDidReceiveMessage(e => {
       switch (e.type) {
 
       }
@@ -82,10 +84,22 @@ export class TailwindEditorProvider implements vscode.CustomTextEditorProvider {
   /**
    * Get the static html used for the editor webviews.
    */
-  private getHtmlForWebview(webview: vscode.Webview): string {
+  private getHtmlForWebview(webview: vscode.Webview, document: vscode.TextDocument): string {
     // Local path to script and css for the webview
     const configUri = webview.asWebviewUri(vscode.Uri.joinPath(
       this.context.extensionUri, 'examples', 'tailwind.config.js'));
+
+    const html = document.getText();
+    let content = html;
+    // If the HTML is full document, we only want the content inside <body>
+    if (html.indexOf('<body') > -1) {
+      content = html.substring(
+        html.indexOf('<body'),
+        html.indexOf('</body>')
+      );
+      // Substring after the first closing tag on the `<body>`
+      content = content.substring(content.indexOf(">") + 1);
+    }
 
     // Use a nonce to whitelist which scripts can be run
     const nonce = getNonce();
@@ -117,7 +131,7 @@ export class TailwindEditorProvider implements vscode.CustomTextEditorProvider {
         <title>Tailwind Editor</title>
       </head>
       <body>
-        <h1 class="text-xl text-clifford">Tailwind Editor</h1>
+        ${ content }
       </body>
       </html>`;
   }

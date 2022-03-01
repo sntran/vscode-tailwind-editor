@@ -85,9 +85,13 @@ export class TailwindEditorProvider implements vscode.CustomTextEditorProvider {
    * Get the static html used for the editor webviews.
    */
   private getHtmlForWebview(webview: vscode.Webview, document: vscode.TextDocument): string {
+    const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri || vscode.Uri.file("/");
+
+    const baseUri = webview.asWebviewUri(rootPath);
+
     // Local path to script and css for the webview
     const configUri = webview.asWebviewUri(vscode.Uri.joinPath(
-      this.context.extensionUri, 'examples', 'tailwind.config.js'));
+      rootPath, 'examples', 'tailwind.config.js'));
 
     const html = document.getText();
     let content = html;
@@ -110,6 +114,9 @@ export class TailwindEditorProvider implements vscode.CustomTextEditorProvider {
       <head>
         <meta charset="UTF-8" />
 
+        <!-- Use the base Uri of the webview from workspace's root path. -->
+        <base href="${baseUri}" />
+
         <!--
         Use a content security policy to only allow loading images from https or from our extension directory,
         and only allow scripts that have a specific nonce.
@@ -131,7 +138,7 @@ export class TailwindEditorProvider implements vscode.CustomTextEditorProvider {
         <title>Tailwind Editor</title>
       </head>
       <body>
-        ${ content }
+        ${content}
       </body>
       </html>`;
   }

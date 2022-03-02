@@ -22,7 +22,18 @@
         ],
         "priority": "default"
       }
-    ]
+    ],
+    "commands": [
+		],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "workbench.action.reopenTextEditor",
+          "group": "navigation",
+          "when": "activeCustomEditorId == tailwind.editor"
+        }
+      ]
+    }
   },
   "activationEvents": [
     "onCustomEditor:tailwind.editor"

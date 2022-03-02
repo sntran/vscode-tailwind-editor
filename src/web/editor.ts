@@ -1,4 +1,24 @@
-import * as vscode from 'vscode';
+import {
+  CustomTextEditorProvider,
+  ExtensionContext,
+  Disposable,
+  CancellationToken,
+
+  WebviewPanel,
+  Webview,
+
+  Uri,
+
+  TextDocument,
+  WorkspaceEdit,
+  Range,
+
+  window,
+  workspace,
+} from 'vscode';
+
+import { DOMParser } from 'xmldom';
+import { select1 } from 'xpath-ts';
 
 import { getNonce } from './util';
 
@@ -14,17 +34,23 @@ import { getNonce } from './util';
  * - Loading scripts and styles in a custom editor.
  * - Synchronizing changes between a text document and a custom editor.
  */
-export class TailwindEditorProvider implements vscode.CustomTextEditorProvider {
-  public static register(context: vscode.ExtensionContext): vscode.Disposable {
+export class TailwindEditorProvider implements CustomTextEditorProvider {
+
+  public static register(context: ExtensionContext): Disposable {
     const provider = new TailwindEditorProvider(context);
-    const providerRegistration = vscode.window.registerCustomEditorProvider(TailwindEditorProvider.viewType, provider);
+    const providerRegistration = window.registerCustomEditorProvider(TailwindEditorProvider.viewType, provider, {
+      webviewOptions: {
+        enableFindWidget: true,
+        retainContextWhenHidden: true,
+      }
+    });
     return providerRegistration;
   }
 
   private static readonly viewType = 'tailwind.editor';
 
   constructor(
-    private readonly context: vscode.ExtensionContext
+    private readonly context: ExtensionContext
   ) { }
 
   /**
@@ -33,9 +59,9 @@ export class TailwindEditorProvider implements vscode.CustomTextEditorProvider {
    *
    */
    public async resolveCustomTextEditor(
-    document: vscode.TextDocument,
-    webviewPanel: vscode.WebviewPanel,
-    _token: vscode.CancellationToken
+    document: TextDocument,
+    webviewPanel: WebviewPanel,
+    _token: CancellationToken
   ): Promise<void> {
     const webview = webviewPanel.webview;
 
@@ -59,7 +85,7 @@ export class TailwindEditorProvider implements vscode.CustomTextEditorProvider {
     //
     // Remember that a single text document can also be shared between multiple custom
     // editors (this happens for example when you split a custom editor)
-    const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument(e => {
+    const changeDocumentSubscription = workspace.onDidChangeTextDocument(e => {
       if (e.document.uri.toString() === document.uri.toString()) {
         updateWebview();
       }
@@ -71,9 +97,11 @@ export class TailwindEditorProvider implements vscode.CustomTextEditorProvider {
     });
 
     // Receive message from the webview.
-    webview.onDidReceiveMessage(e => {
-      switch (e.type) {
-
+    webview.onDidReceiveMessage(({type, payload}) => {
+      switch (type) {
+        case 'mutations':
+          this.applyMutations(document, payload);
+          break;
       }
     });
 
@@ -84,13 +112,16 @@ export class TailwindEditorProvider implements vscode.CustomTextEditorProvider {
   /**
    * Get the static html used for the editor webviews.
    */
-  private getHtmlForWebview(webview: vscode.Webview, document: vscode.TextDocument): string {
-    const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri || vscode.Uri.file("/");
+  private getHtmlForWebview(webview: Webview, document: TextDocument): string {
+    const rootPath = workspace.workspaceFolders?.[0]?.uri || Uri.file("/");
 
     const baseUri = webview.asWebviewUri(rootPath);
 
     // Local path to script and css for the webview
-    const configUri = webview.asWebviewUri(vscode.Uri.joinPath(
+    const scriptUri = webview.asWebviewUri(Uri.joinPath(
+      this.context.extensionUri, 'media', 'editor.js'));
+
+    const configUri = webview.asWebviewUri(Uri.joinPath(
       rootPath, 'examples', 'tailwind.config.js'));
 
     const html = document.getText();
@@ -136,10 +167,48 @@ export class TailwindEditorProvider implements vscode.CustomTextEditorProvider {
         </style>
 
         <title>Tailwind Editor</title>
+
+        <template id="tailwind-editor-template">
+          <slot></slot>
+
+          <script nonce="${nonce}" crossorigin src="https://unpkg.com/get-xpath"></script>
+        </template>
       </head>
-      <body>
+
+      <body is="tailwind-editor">
         ${content}
+
+        <script nonce="${nonce}" src="${scriptUri}"></script>
       </body>
       </html>`;
+  }
+
+  /**
+   * Applies a list of mutations to a text document.
+   */
+  private applyMutations(document: TextDocument, mutations: any[]):void {
+    const doc = new DOMParser().parseFromString(document.getText());
+    mutations.forEach(mutation => {
+      const {
+        type,
+        attributeName,
+        oldValue,
+        newValue,
+        xpath,
+      } = mutation;
+
+      const target = <Element> select1(xpath.replace("/html/body/", "//"), doc);
+      target.setAttribute(attributeName, newValue);
+    });
+
+    const edit = new WorkspaceEdit();
+    // Just replace the entire document every time for now.
+    // A more complete extension should compute minimal edits instead.
+    edit.replace(
+      document.uri,
+      new Range(0, 0, document.lineCount, 0),
+      doc.toString()
+    );
+    workspace.applyEdit(edit);
   }
 }

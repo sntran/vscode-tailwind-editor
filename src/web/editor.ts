@@ -70,8 +70,8 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
     webview.options = {
       enableScripts: true,
     };
-    // Sets up initial skeleton page.
-    webview.html = this.getHtmlForWebview(webview);
+    // Sets up initial page.
+    webview.html = this.getHtmlForWebview(webview, document);
 
     // Hook up event handlers so that we can synchronize the webview with the text document.
     //
@@ -99,15 +99,12 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
           break;
       }
     });
-
-    this.updateWebview(webview, document);
-
   }
 
   /**
    * Get the static html used for the editor webviews.
    */
-  private getHtmlForWebview(webview: Webview): string {
+  private getHtmlForWebview(webview: Webview, document: TextDocument): string {
     const rootPath = workspace.workspaceFolders?.[0]?.uri || Uri.file("/");
 
     const baseUri = webview.asWebviewUri(rootPath);
@@ -159,6 +156,7 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
       </head>
 
       <body is="tailwind-editor">
+        ${this.getContent(document)}
         <script nonce="${nonce}" crossorigin src="https://unpkg.com/get-xpath"></script>
         <script nonce="${nonce}" crossorigin src="https://bundle.run/nanomorph@5.4.2"></script>
         <script nonce="${nonce}" src="${scriptUri}"></script>
@@ -166,7 +164,10 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
       </html>`;
   }
 
-  private updateWebview(webview: Webview, document: TextDocument): void {
+  /**
+   * Gets the main HTML content of the document
+   */
+  private getContent(document: TextDocument): string {
     const html = document.getText();
     let content = html;
     // If the HTML is full document, we only want the content inside <body>
@@ -179,9 +180,13 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
       content = content.substring(content.indexOf(">") + 1);
     }
 
+    return content;
+  }
+
+  private updateWebview(webview: Webview, document: TextDocument): void {
     webview.postMessage({
       type: 'update',
-      content,
+      content: this.getContent(document),
     });
   }
 

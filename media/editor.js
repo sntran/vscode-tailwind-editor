@@ -6,6 +6,8 @@
 // @ts-ignore
 const vscode = acquireVsCodeApi();
 
+const parser = new DOMParser();
+
 /**
  * Tailwind Editor as a Web Component.
  */
@@ -23,9 +25,6 @@ class TailwindEditor extends HTMLBodyElement {
     }); // sets and returns `this.shadowRoot`
     shadowRoot.appendChild(template.content);
     template.remove();
-
-    // Remove the current script tag so it does not show up in the light DOM.
-    document.currentScript.remove();
   }
 
   connectedCallback() {
@@ -82,7 +81,12 @@ window.customElements.define("tailwind-editor", TailwindEditor, {
  * Render the document in the webview.
  */
 function updateContent(/** @type {string} */ content) {
-  document.body.innerHTML = content;
+  const newDOM = parser.parseFromString(content, "text/html");
+  // Morphs the DOM with the new changes only.
+  nanomorph(
+    document.body,
+    newDOM.body
+  );
 }
 
 window.addEventListener('message', event => {

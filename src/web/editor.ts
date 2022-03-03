@@ -154,11 +154,13 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
         <template id="tailwind-editor-template">
           <slot></slot>
 
-          <script nonce="${nonce}" crossorigin src="https://unpkg.com/get-xpath"></script>
+
         </template>
       </head>
 
       <body is="tailwind-editor">
+        <script nonce="${nonce}" crossorigin src="https://unpkg.com/get-xpath"></script>
+        <script nonce="${nonce}" crossorigin src="https://bundle.run/nanomorph@5.4.2"></script>
         <script nonce="${nonce}" src="${scriptUri}"></script>
       </body>
       </html>`;

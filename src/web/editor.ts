@@ -195,6 +195,8 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
    */
   private applyMutations(document: TextDocument, mutations: any[]):void {
     const doc = parseHtml(document.getText());
+    let changed = false;
+
     mutations.forEach(mutation => {
       const {
         type,
@@ -204,9 +206,14 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
         xpath,
       } = mutation;
 
+      if (xpath === "/html/body") return;
+
       const target = select1(xpath.replace("/html/body/", "//"), doc);
       target.setAttribute(attributeName, newValue);
+      changed = true;
     });
+
+    if (!changed) return;
 
     const edit = new WorkspaceEdit();
     // Just replace the entire document every time for now.

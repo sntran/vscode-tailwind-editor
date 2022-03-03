@@ -17,10 +17,11 @@ import {
   workspace,
 } from 'vscode';
 
-import { DOMParser } from 'xmldom';
-import { select1 } from 'xpath-ts';
-
-import { getNonce } from './util';
+import {
+  getNonce,
+  parseHtml,
+  select1,
+} from './util';
 
 /**
  * Provider for Tailwind Editor.
@@ -187,7 +188,7 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
    * Applies a list of mutations to a text document.
    */
   private applyMutations(document: TextDocument, mutations: any[]):void {
-    const doc = new DOMParser().parseFromString(document.getText());
+    const doc = parseHtml(document.getText());
     mutations.forEach(mutation => {
       const {
         type,
@@ -197,7 +198,7 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
         xpath,
       } = mutation;
 
-      const target = <Element> select1(xpath.replace("/html/body/", "//"), doc);
+      const target = select1(xpath.replace("/html/body/", "//"), doc);
       target.setAttribute(attributeName, newValue);
     });
 

@@ -82,6 +82,7 @@ window.customElements.define("tailwind-editor", TailwindEditor, {
  */
 function updateContent(/** @type {string} */ content) {
   const newDOM = parser.parseFromString(content, "text/html");
+  // @ts-ignore
   // Morphs the DOM with the new changes only.
   nanomorph(
     document.body,

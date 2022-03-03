@@ -23,6 +23,31 @@ import {
   select1,
 } from './util';
 
+const SSI_REGEX = /<!--[ ]*#([a-z]+)([ ]+([a-z]+)="(.+?)")*[ ]*-->/g;
+const enum SSIDirecive {
+  include = 'include',
+  exec = 'exec',
+  echo = 'echo',
+  config = 'config',
+};
+type SSIParam = SSIIncludeParam | SSIExecParam | SSIEchoParam | SSIConfigParam;
+const enum SSIIncludeParam {
+  file = 'file',
+  virtual = 'virtual',
+};
+const enum SSIExecParam {
+  cgi = 'cgi',
+  cmd = 'cmd',
+};
+const enum SSIEchoParam {
+  var = 'var',
+};
+const enum SSIConfigParam {
+  timefmt = 'timefmt',
+  sizefmt = 'sizefmt',
+  errmsg = 'errmsg',
+}
+
 /**
  * Provider for Tailwind Editor.
  *
@@ -50,16 +75,20 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
 
   private static readonly viewType = 'tailwind.editor';
 
+  private rootPath: Uri;
+
   constructor(
     private readonly context: ExtensionContext
-  ) { }
+  ) {
+    this.rootPath = workspace.workspaceFolders?.[0]?.uri || Uri.file("/");
+   }
 
   /**
    * Called when our custom editor is opened.
    *
    *
    */
-   public async resolveCustomTextEditor(
+  public async resolveCustomTextEditor(
     document: TextDocument,
     webviewPanel: WebviewPanel,
     _token: CancellationToken
@@ -71,7 +100,8 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
       enableScripts: true,
     };
     // Sets up initial page.
-    webview.html = this.getHtmlForWebview(webview, document);
+    const content = await this.getContent(document);
+    webview.html = this.getHtmlForWebview(webview, content);
 
     // Hook up event handlers so that we can synchronize the webview with the text document.
     //
@@ -104,9 +134,8 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
   /**
    * Get the static html used for the editor webviews.
    */
-  private getHtmlForWebview(webview: Webview, document: TextDocument): string {
-    const rootPath = workspace.workspaceFolders?.[0]?.uri || Uri.file("/");
-
+  private getHtmlForWebview(webview: Webview, body: string): string {
+    const rootPath = this.rootPath;
     const baseUri = webview.asWebviewUri(rootPath);
 
     // Local path to script and css for the webview
@@ -156,7 +185,7 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
       </head>
 
       <body is="tailwind-editor">
-        ${this.getContent(document)}
+        ${body}
         <script nonce="${nonce}" crossorigin src="https://unpkg.com/get-xpath"></script>
         <script nonce="${nonce}" crossorigin src="https://bundle.run/nanomorph@5.4.2"></script>
         <script nonce="${nonce}" src="${scriptUri}"></script>
@@ -167,7 +196,7 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
   /**
    * Gets the main HTML content of the document
    */
-  private getContent(document: TextDocument): string {
+  private async getContent(document: TextDocument): Promise<string> {
     const html = document.getText();
     let content = html;
     // If the HTML is full document, we only want the content inside <body>
@@ -180,13 +209,44 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
       content = content.substring(content.indexOf(">") + 1);
     }
 
-    return content;
+    const uri = document.uri;
+    const extname = '.' + uri.path.substring(uri.path.lastIndexOf(".") + 1);
+
+    // We don't process SSI for plain HTML file, except .shtml, .stm, .shtm.
+    // @TODO: Accepts a setting to override this check.
+    if (extname === ".html") {
+      return content;
+    }
+
+    const promises: Promise<string>[] = [];
+    // We can't do async replace, so we store the replacements as promises instead.
+    content.replace(SSI_REGEX, (match, directive: SSIDirecive, _, param: SSIParam, value: string) => {
+      // Only handle `include` directive for now.
+      if (directive !== SSIDirecive.include) return match;
+
+      // @TODO: handle between `file` or `virtual` param.
+
+      const includeUri = Uri.joinPath(uri, '..', value);
+      const thenable = workspace.openTextDocument(includeUri).then(includedDocument => {
+        return this.getContent(includedDocument);
+      });
+      promises.push(Promise.resolve(thenable));
+
+      return match;
+    });
+
+    // We now await all the promises to get the list of includes.
+    const includes = await Promise.all(promises);
+
+    // One more run to replace SSI with actual include content.
+    return content.replace(SSI_REGEX, () => includes.shift() || '');
   }
 
-  private updateWebview(webview: Webview, document: TextDocument): void {
-    webview.postMessage({
+  private async updateWebview(webview: Webview, document: TextDocument) {
+    const content = await this.getContent(document);
+    return webview.postMessage({
       type: 'update',
-      content: this.getContent(document),
+      content,
     });
   }
 

@@ -70,14 +70,8 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
     webview.options = {
       enableScripts: true,
     };
-    webview.html = this.getHtmlForWebview(webview, document);
-
-    function updateWebview() {
-      webview.postMessage({
-        type: 'update',
-        text: document.getText(),
-      });
-    }
+    // Sets up initial skeleton page.
+    webview.html = this.getHtmlForWebview(webview);
 
     // Hook up event handlers so that we can synchronize the webview with the text document.
     //
@@ -86,9 +80,9 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
     //
     // Remember that a single text document can also be shared between multiple custom
     // editors (this happens for example when you split a custom editor)
-    const changeDocumentSubscription = workspace.onDidChangeTextDocument(e => {
-      if (e.document.uri.toString() === document.uri.toString()) {
-        updateWebview();
+    const changeDocumentSubscription = workspace.onDidChangeTextDocument(event => {
+      if (event.document.uri.toString() === document.uri.toString()) {
+        this.updateWebview(webview, document);
       }
     });
 
@@ -106,14 +100,14 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
       }
     });
 
-    updateWebview();
+    this.updateWebview(webview, document);
 
   }
 
   /**
    * Get the static html used for the editor webviews.
    */
-  private getHtmlForWebview(webview: Webview, document: TextDocument): string {
+  private getHtmlForWebview(webview: Webview): string {
     const rootPath = workspace.workspaceFolders?.[0]?.uri || Uri.file("/");
 
     const baseUri = webview.asWebviewUri(rootPath);
@@ -124,18 +118,6 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
 
     const configUri = webview.asWebviewUri(Uri.joinPath(
       rootPath, 'examples', 'tailwind.config.js'));
-
-    const html = document.getText();
-    let content = html;
-    // If the HTML is full document, we only want the content inside <body>
-    if (html.indexOf('<body') > -1) {
-      content = html.substring(
-        html.indexOf('<body'),
-        html.indexOf('</body>')
-      );
-      // Substring after the first closing tag on the `<body>`
-      content = content.substring(content.indexOf(">") + 1);
-    }
 
     // Use a nonce to whitelist which scripts can be run
     const nonce = getNonce();
@@ -177,11 +159,28 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
       </head>
 
       <body is="tailwind-editor">
-        ${content}
-
         <script nonce="${nonce}" src="${scriptUri}"></script>
       </body>
       </html>`;
+  }
+
+  private updateWebview(webview: Webview, document: TextDocument): void {
+    const html = document.getText();
+    let content = html;
+    // If the HTML is full document, we only want the content inside <body>
+    if (html.indexOf('<body') > -1) {
+      content = html.substring(
+        html.indexOf('<body'),
+        html.indexOf('</body>')
+      );
+      // Substring after the first closing tag on the `<body>`
+      content = content.substring(content.indexOf(">") + 1);
+    }
+
+    webview.postMessage({
+      type: 'update',
+      content,
+    });
   }
 
   /**

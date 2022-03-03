@@ -77,3 +77,34 @@ class TailwindEditor extends HTMLBodyElement {
 window.customElements.define("tailwind-editor", TailwindEditor, {
   extends: "body",
 });
+
+/**
+ * Render the document in the webview.
+ */
+function updateContent(/** @type {string} */ content) {
+  document.body.innerHTML = content;
+}
+
+window.addEventListener('message', event => {
+  const message = event.data; // The json data that the extension sent
+  switch (message.type) {
+    case 'update':
+      const content = message.content;
+
+      // Update our webview's content
+      updateContent(content);
+
+      // Then persist state information.
+      // This state is returned in the call to `vscode.getState` below when a webview is reloaded.
+      vscode.setState({ content });
+
+      return;
+  }
+});
+
+// Webviews are normally torn down when not visible and re-created when they become visible again.
+// State lets us save information across these re-loads
+const state = vscode.getState();
+if (state) {
+  updateContent(state.content);
+}

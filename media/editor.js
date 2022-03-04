@@ -6,8 +6,6 @@
 // @ts-ignore
 const vscode = acquireVsCodeApi();
 
-const parser = new DOMParser();
-
 /**
  * Tailwind Editor as a Web Component.
  */
@@ -81,13 +79,13 @@ window.customElements.define("tailwind-editor", TailwindEditor, {
  * Render the document in the webview.
  */
 function updateContent(/** @type {string} */ content) {
-  const newDOM = parser.parseFromString(content, "text/html");
+  const newDocument = new DOMParser().parseFromString(content, 'text/html');
+
   // @ts-ignore
   // Morphs the DOM with the new changes only.
-  nanomorph(
-    document.body,
-    newDOM.body
-  );
+  nanomorph(document.body, newDocument.body, {
+    childrenOnly: true,
+  });
 }
 
 window.addEventListener('message', event => {

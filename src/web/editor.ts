@@ -109,16 +109,18 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
     // editor and sync changes in the editor back to the document.
     //
     // Remember that a single text document can also be shared between multiple custom
-    // editors (this happens for example when you split a custom editor)
-    const changeDocumentSubscription = workspace.onDidChangeTextDocument(event => {
-      if (event.document.uri.toString() === document.uri.toString()) {
+    // editors (this happens for example when you split a custom editor).
+
+    // Here, we only
+    const saveDocumentSubscription = workspace.onDidSaveTextDocument(savedDocument => {
+      if (savedDocument.uri.toString() === document.uri.toString()) {
         this.updateWebview(webview, document);
       }
     });
 
     // Make sure we get rid of the listener when our editor is closed.
     webviewPanel.onDidDispose(() => {
-      changeDocumentSubscription.dispose();
+      saveDocumentSubscription.dispose();
     });
 
     // Receive message from the webview.
@@ -179,15 +181,13 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
 
         <template id="tailwind-editor-template">
           <slot></slot>
-
-
         </template>
       </head>
 
       <body is="tailwind-editor">
         ${body}
         <script nonce="${nonce}" crossorigin src="https://unpkg.com/get-xpath"></script>
-        <script nonce="${nonce}" crossorigin src="https://bundle.run/nanomorph@5.4.2"></script>
+        <script nonce="${nonce}" crossorigin src="https://bundle.run/nanomorph@5.4.3"></script>
         <script nonce="${nonce}" src="${scriptUri}"></script>
       </body>
       </html>`;
@@ -281,7 +281,7 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
     edit.replace(
       document.uri,
       new Range(0, 0, document.lineCount, 0),
-      doc.toString()
+      doc.toString().replace(` xmlns="http://www.w3.org/1999/xhtml"`, '')
     );
     workspace.applyEdit(edit);
   }

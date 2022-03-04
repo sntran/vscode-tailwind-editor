@@ -10,10 +10,8 @@ export function getNonce() {
   return text;
 }
 
-const parser = new DOMParser();
-
 export function parseHtml(text: string) {
-  return parser.parseFromString(text, 'text/html');
+  return new DOMParser().parseFromString(text, 'text/html');
 }
 
 export function select1(xpath: string, node: Node): Element {

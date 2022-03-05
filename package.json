@@ -27,6 +27,10 @@
       }
     ],
     "commands": [
+      {
+        "command": "tailwind.editor.open",
+        "title": "Open With Tailwind Editor"
+      }
 		],
     "menus": {
       "editor/title": [
@@ -34,12 +38,18 @@
           "command": "workbench.action.reopenTextEditor",
           "group": "navigation",
           "when": "activeCustomEditorId == tailwind.editor"
+        },
+        {
+          "command": "tailwind.editor.open",
+          "group": "navigation",
+          "when": "activeCustomEditorId != tailwind.editor"
         }
       ]
     }
   },
   "activationEvents": [
-    "onCustomEditor:tailwind.editor"
+    "onCustomEditor:tailwind.editor",
+    "onCommand:tailwind.editor.open"
   ],
   "scripts": {
     "test": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/index.js",

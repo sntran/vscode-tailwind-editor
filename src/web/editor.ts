@@ -15,6 +15,7 @@ import {
 
   window,
   workspace,
+  commands,
 } from 'vscode';
 
 import {
@@ -63,6 +64,16 @@ const enum SSIConfigParam {
 export class TailwindEditorProvider implements CustomTextEditorProvider {
 
   public static register(context: ExtensionContext): Disposable {
+    commands.registerCommand('tailwind.editor.open', (resource: Uri) => {
+      const workspaceFolders = workspace.workspaceFolders;
+      if (!workspaceFolders) {
+        window.showErrorMessage("Opening files with Tailwind Editor currently requires opening a workspace");
+        return;
+      }
+
+      commands.executeCommand('vscode.openWith', resource, TailwindEditorProvider.viewType);
+    });
+
     const provider = new TailwindEditorProvider(context);
     const providerRegistration = window.registerCustomEditorProvider(TailwindEditorProvider.viewType, provider, {
       webviewOptions: {

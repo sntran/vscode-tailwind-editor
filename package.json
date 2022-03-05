@@ -1,5 +1,5 @@
 {
-  "name": "vscode-tailwind-play",
+  "name": "vscode-tailwind-editor",
   "displayName": "Tailwind VSCode Editor",
   "description": "Tailwind Playground/Editor in VSCode",
   "version": "0.0.1",
@@ -45,6 +45,19 @@
           "when": "activeCustomEditorId != tailwind.editor"
         }
       ]
+    },
+    "configuration": {
+      "title": "Tailwind Editor",
+      "properties": {
+        "tailwind.editor.serverSideIncludes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [".shtml"],
+          "description": "List of extensions for file that will be parsed as Server-Side Includes"
+        }
+      }
     }
   },
   "activationEvents": [

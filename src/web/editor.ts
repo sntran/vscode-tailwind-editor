@@ -220,9 +220,9 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
     const uri = document.uri;
     const extname = '.' + uri.path.substring(uri.path.lastIndexOf(".") + 1);
 
-    // We don't process SSI for plain HTML file, except .shtml, .stm, .shtm.
-    // @TODO: Accepts a setting to override this check.
-    if (extname === ".html") {
+    // We only process SSI if settings allow this extension.
+    const ssiSettings: string[] = workspace.getConfiguration('tailwind.editor').get('serverSideIncludes', ['.shtml']);
+    if (ssiSettings.indexOf(extname) === -1) {
       return content;
     }
 

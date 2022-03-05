@@ -109,6 +109,7 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
     // Setup initial content for the webview
     webview.options = {
       enableScripts: true,
+      enableCommandUris: true,
     };
     // Sets up initial page.
     const content = await this.getContent(document);
@@ -189,10 +190,6 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
         </style>
 
         <title>Tailwind Editor</title>
-
-        <template id="tailwind-editor-template">
-          <slot></slot>
-        </template>
       </head>
 
       <body is="tailwind-editor">
@@ -238,9 +235,16 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
       // @TODO: handle between `file` or `virtual` param.
 
       const includeUri = Uri.joinPath(uri, '..', value);
-      const thenable = workspace.openTextDocument(includeUri).then(includedDocument => {
-        return this.getContent(includedDocument);
-      });
+      const thenable =
+        workspace.openTextDocument(includeUri)
+        .then(includedDocument => this.getContent(includedDocument))
+        .then(html => {
+          const args = [
+            includeUri
+          ];
+          const commandUri = Uri.parse(`command:tailwind.editor.open?${encodeURIComponent(JSON.stringify(args))}`);
+          return html.replace(/^<([a-z-]+) /, `<vscode-portal is="$1" src="${commandUri}" `);
+        });
       promises.push(Promise.resolve(thenable));
 
       return match;

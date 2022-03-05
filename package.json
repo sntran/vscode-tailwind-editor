@@ -59,7 +59,7 @@
     "esbuild": "npm run esbuild-base -- --sourcemap",
     "watch": "npm run esbuild-base -- --sourcemap --watch",
     "lint": "eslint src --ext ts",
-    "start": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ."
+    "start": "vscode-test-web --browserType=chromium --open-devtools --extensionDevelopmentPath=. ."
   },
   "devDependencies": {
     "@types/mocha": "^9.1.0",

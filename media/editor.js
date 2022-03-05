@@ -9,7 +9,7 @@ const vscode = acquireVsCodeApi();
 /**
  * Tailwind Editor as a Web Component.
  */
-class TailwindEditor extends HTMLBodyElement {
+window.customElements.define('tailwind-editor', class extends HTMLBodyElement {
   constructor() {
     // Always call super first in constructor
     super();
@@ -19,10 +19,12 @@ class TailwindEditor extends HTMLBodyElement {
     const shadowRoot = this.attachShadow({
       // Keeps the shadow root open so we can query elements
       // inside it for event binding.
-      mode: "open",
+      mode: 'open',
     }); // sets and returns `this.shadowRoot`
-    shadowRoot.appendChild(template.content);
-    template.remove();
+    shadowRoot.innerHTML = `
+      <style></style>
+      <slot></slot>
+    `;
   }
 
   connectedCallback() {
@@ -69,10 +71,54 @@ class TailwindEditor extends HTMLBodyElement {
       characterDataOldValue: false,
     });
   }
-}
+}, {
+  extends: 'body',
+});
 
-window.customElements.define("tailwind-editor", TailwindEditor, {
-  extends: "body",
+// A custom element that acts like the new `<portal>` element.
+// Content in its light DOM are kept as is, but wrapped with an `<a>` inside
+// the shadow DOM. Scoped styles also prevent user interaction to content.s
+window.customElements.define('vscode-portal', class extends HTMLElement {
+  constructor() {
+    // Always call super first in constructor
+    super();
+
+    const template = /** @type {HTMLTemplateElement} */ (document.getElementById('tailwind-editor-template'));
+    // Create a shadow root
+    const shadowRoot = this.attachShadow({
+      // Keeps the shadow root open so we can query elements
+      // inside it for event binding.
+      mode: 'open',
+    }); // sets and returns `this.shadowRoot`
+
+    const style = document.createElement('style');
+    const link = document.createElement('a');
+    const slot = document.createElement('slot');
+
+    style.innerHTML = `
+      :host {
+        display: block;
+      }
+      :host(:hover) {
+        outline: 1px dotted;
+      }
+      :host > a {
+        display: block;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      ::slotted(*) {
+        pointer-events: none;
+        user-select: none;
+      }
+    `;
+
+    link.setAttribute('href', this.getAttribute('src'));
+
+    shadowRoot.appendChild(style);
+    shadowRoot.appendChild(link);
+    link.appendChild(slot);
+  }
 });
 
 /**

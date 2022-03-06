@@ -31,7 +31,7 @@
         "command": "tailwind.editor.open",
         "title": "Open With Tailwind Editor"
       }
-		],
+    ],
     "menus": {
       "editor/title": [
         {
@@ -46,6 +46,26 @@
         }
       ]
     },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "tailwind-editor",
+          "title": "Tailwind",
+          "icon": "$(symbol-color)"
+        }
+      ]
+    },
+    "views": {
+      "tailwind-editor": [
+        {
+          "type": "webview",
+          "id": "tailwind.editor.view",
+          "name": "Styles",
+          "when": "activeCustomEditorId == tailwind.editor",
+          "visibility": "collapsed"
+        }
+      ]
+    },
     "configuration": {
       "title": "Tailwind Editor",
       "properties": {
@@ -54,7 +74,9 @@
           "items": {
             "type": "string"
           },
-          "default": [".shtml"],
+          "default": [
+            ".shtml"
+          ],
           "description": "List of extensions for file that will be parsed as Server-Side Includes"
         }
       }
@@ -88,6 +110,8 @@
     "typescript": "^4.5.5"
   },
   "dependencies": {
+    "@vscode/codicons": "^0.0.28",
+    "@vscode/webview-ui-toolkit": "^0.9.2",
     "@xmldom/xmldom": "^0.8.1",
     "xpath": "^0.0.32"
   }

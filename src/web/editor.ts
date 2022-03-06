@@ -63,17 +63,9 @@ const enum SSIConfigParam {
  */
 export class TailwindEditorProvider implements CustomTextEditorProvider {
 
+  public static readonly viewType = 'tailwind.editor';
+
   public static register(context: ExtensionContext): Disposable {
-    commands.registerCommand('tailwind.editor.open', (resource: Uri) => {
-      const workspaceFolders = workspace.workspaceFolders;
-      if (!workspaceFolders) {
-        window.showErrorMessage("Opening files with Tailwind Editor currently requires opening a workspace");
-        return;
-      }
-
-      commands.executeCommand('vscode.openWith', resource, TailwindEditorProvider.viewType);
-    });
-
     const provider = new TailwindEditorProvider(context);
     const providerRegistration = window.registerCustomEditorProvider(TailwindEditorProvider.viewType, provider, {
       webviewOptions: {
@@ -83,8 +75,6 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
     });
     return providerRegistration;
   }
-
-  private static readonly viewType = 'tailwind.editor';
 
   private rootPath: Uri;
 
@@ -151,13 +141,16 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
   private getHtmlForWebview(webview: Webview, body: string): string {
     const rootPath = this.rootPath;
     const baseUri = webview.asWebviewUri(rootPath);
+    const extensionUri = this.context.extensionUri;
 
     // Local path to script and css for the webview
-    const scriptUri = webview.asWebviewUri(Uri.joinPath(
-      this.context.extensionUri, 'media', 'editor.js'));
+    const scriptUri = webview.asWebviewUri(
+      Uri.joinPath(extensionUri, 'media', 'editor.mjs')
+    );
 
-    const configUri = webview.asWebviewUri(Uri.joinPath(
-      rootPath, 'examples', 'tailwind.config.js'));
+    const configUri = webview.asWebviewUri(
+      Uri.joinPath(rootPath, 'examples', 'tailwind.config.js')
+    );
 
     // Use a nonce to whitelist which scripts can be run
     const nonce = getNonce();
@@ -196,7 +189,7 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
         ${body}
         <script nonce="${nonce}" crossorigin src="https://unpkg.com/get-xpath"></script>
         <script nonce="${nonce}" crossorigin src="https://bundle.run/nanomorph@5.4.3"></script>
-        <script nonce="${nonce}" src="${scriptUri}"></script>
+        <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
       </body>
       </html>`;
   }

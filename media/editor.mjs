@@ -1,7 +1,5 @@
 // @ts-check
 
-import { setup } from "https://cdn.skypack.dev/twind/shim";
-
 // Get a reference to the VS Code webview api.
 // We use this API to post messages back to our extension.
 
@@ -16,7 +14,6 @@ window.customElements.define('tailwind-editor', class extends HTMLBodyElement {
     // Always call super first in constructor
     super();
 
-    const template = /** @type {HTMLTemplateElement} */ (document.getElementById('tailwind-editor-template'));
     // Create a shadow root
     const shadowRoot = this.attachShadow({
       // Keeps the shadow root open so we can query elements
@@ -72,10 +69,6 @@ window.customElements.define('tailwind-editor', class extends HTMLBodyElement {
       characterData: false,
       characterDataOldValue: false,
     });
-
-    setup({
-      target: this.shadowRoot,
-    })
   }
 }, {
   extends: 'body',

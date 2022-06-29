@@ -36,10 +36,10 @@ window.customElements.define('tailwind-editor', class extends HTMLBodyElement {
           type,
           target,
           attributeName,
-          oldValue,
+          oldValue = '',
         } = mutation;
 
-        const newValue = /** @type {Element} */(target).getAttribute(attributeName);
+        const newValue = /** @type {Element} */(target).getAttribute(attributeName) || '';
 
         if (newValue === oldValue) return;
 

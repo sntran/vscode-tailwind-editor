@@ -1,21 +1,19 @@
 import {
+  CancellationToken,
   CustomTextEditorProvider,
   ExtensionContext,
   Disposable,
-  CancellationToken,
 
-  WebviewPanel,
-  Webview,
-
-  Uri,
-
-  TextDocument,
-  WorkspaceEdit,
+  Position,
   Range,
+  TextDocument,
+  Uri,
+  Webview,
+  WebviewPanel,
+  WorkspaceEdit,
 
   window,
   workspace,
-  commands,
 } from 'vscode';
 
 import {
@@ -24,7 +22,7 @@ import {
   select1,
 } from './util';
 
-const SSI_REGEX = /<!--[ ]*#([a-z]+)([ ]+([a-z]+)="(.+?)")*[ ]*-->/g;
+const SSI_REGEX = /<!--[ ]*#(include|echo)([ ]+(file|virtual|var)="(.+?)")*[ ]*-->/g;
 const enum SSIDirecive {
   include = 'include',
   exec = 'exec',
@@ -61,18 +59,20 @@ const enum SSIConfigParam {
  * - Loading scripts and styles in a custom editor.
  * - Synchronizing changes between a text document and a custom editor.
  */
-export class TailwindEditorProvider implements CustomTextEditorProvider {
+export class TailwindEditor implements CustomTextEditorProvider {
 
   public static readonly viewType = 'tailwind.editor';
 
   public static register(context: ExtensionContext): Disposable {
-    const provider = new TailwindEditorProvider(context);
-    const providerRegistration = window.registerCustomEditorProvider(TailwindEditorProvider.viewType, provider, {
+    const provider = new TailwindEditor(context);
+    const providerRegistration = window.registerCustomEditorProvider(TailwindEditor.viewType, provider, {
+      supportsMultipleEditorsPerDocument: true,
       webviewOptions: {
         enableFindWidget: true,
         retainContextWhenHidden: true,
       }
     });
+
     return providerRegistration;
   }
 
@@ -236,7 +236,7 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
             includeUri
           ];
           const commandUri = Uri.parse(`command:tailwind.editor.open?${encodeURIComponent(JSON.stringify(args))}`);
-          return html.replace(/^<([a-z-]+) /, `<vscode-portal is="$1" src="${commandUri}" `);
+          return html.replace(/<([a-z-]+) /, `<vscode-portal is="$1" src="${commandUri}" `);
         });
       promises.push(Promise.resolve(thenable));
 
@@ -262,35 +262,56 @@ export class TailwindEditorProvider implements CustomTextEditorProvider {
    * Applies a list of mutations to a text document.
    */
   private applyMutations(document: TextDocument, mutations: any[]):void {
-    const doc = parseHtml(document.getText());
-    let changed = false;
+    let html = document.getText();
+    const doc = parseHtml(html);
+    const edit = new WorkspaceEdit();
 
     mutations.forEach(mutation => {
       const {
         type,
         attributeName,
-        oldValue,
-        newValue,
+        oldValue = '',
+        newValue = '',
         xpath,
       } = mutation;
 
-      if (xpath === "/html/body") return;
+      if (xpath === '/html/body') return;
 
-      const target = select1(xpath.replace("/html/body/", "//"), doc);
-      target.setAttribute(attributeName, newValue);
-      changed = true;
+      const target = select1(xpath.replace('/html/body/', '//'), doc);
+      if (!target) return;
+
+      // Removes the namespace to avoid parser putting it on the HTML.
+      target.namespaceURI = null;
+      // Starting from the target element's position.
+      const startPosition = new Position(target.lineNumber - 1, target.columnNumber - 1);
+      // Gets the start offset in zero-based index.
+      const startOffset = document.offsetAt(startPosition);
+
+      // Retrieves the HTML of just the opening tag of the target to replace.
+      // We need to depend on the next `>` because the opening tag can span multiple lines,
+      // as well as with or without self-closing.
+      let targetHtml = html.substring(startOffset);
+      const endOffset = startOffset + targetHtml.indexOf('>') + 1;
+      const endPosition = document.positionAt(endOffset);
+
+      // Makes adjustments to the target element.
+      if (newValue) {
+        target.setAttribute(attributeName, newValue);
+      } else {
+        target.removeAttribute(attributeName);
+      }
+
+      // Retrives the target's new HTML.
+      targetHtml = target.toString();
+
+      // Only replaces the opening tag.
+      edit.replace(
+        document.uri,
+        new Range(startPosition, endPosition),
+        targetHtml.substring(0, targetHtml.indexOf('>') + 1)
+      );
     });
 
-    if (!changed) return;
-
-    const edit = new WorkspaceEdit();
-    // Just replace the entire document every time for now.
-    // A more complete extension should compute minimal edits instead.
-    edit.replace(
-      document.uri,
-      new Range(0, 0, document.lineCount, 0),
-      doc.toString().replace(` xmlns="http://www.w3.org/1999/xhtml"`, '')
-    );
     workspace.applyEdit(edit);
   }
 }

@@ -14,9 +14,9 @@ export function parseHtml(text: string) {
   return new DOMParser().parseFromString(text, 'text/html');
 }
 
-export function select1(xpath: string, node: Node): Element {
+export function select1(xpath: string, node: Node, options = { isHtml: true }): Element {
   return XPath.parse(xpath).select1({
     node,
-    isHtml: true,
+    ...options,
   });
 }

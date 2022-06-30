@@ -9,7 +9,7 @@ const vscode = acquireVsCodeApi();
 /**
  * Tailwind Editor as a Web Component.
  */
-window.customElements.define('tailwind-editor', class extends HTMLBodyElement {
+customElements.define("tailwind-editor", class extends HTMLBodyElement {
   constructor() {
     // Always call super first in constructor
     super();
@@ -18,7 +18,7 @@ window.customElements.define('tailwind-editor', class extends HTMLBodyElement {
     const shadowRoot = this.attachShadow({
       // Keeps the shadow root open so we can query elements
       // inside it for event binding.
-      mode: 'open',
+      mode: "open",
     }); // sets and returns `this.shadowRoot`
     shadowRoot.innerHTML = `
       <style></style>
@@ -36,10 +36,10 @@ window.customElements.define('tailwind-editor', class extends HTMLBodyElement {
           type,
           target,
           attributeName,
-          oldValue = '',
+          oldValue = "",
         } = mutation;
 
-        const newValue = /** @type {Element} */(target).getAttribute(attributeName) || '';
+        const newValue = /** @type {Element} */(target).getAttribute(attributeName) || "";
 
         if (newValue === oldValue) return;
 
@@ -55,7 +55,7 @@ window.customElements.define('tailwind-editor', class extends HTMLBodyElement {
 
       // Sends serialized payload to backend.
       vscode.postMessage({
-        type: 'mutations',
+        type: "mutations",
         payload,
       });
     });
@@ -64,67 +64,148 @@ window.customElements.define('tailwind-editor', class extends HTMLBodyElement {
       subtree: true,
       childList: false,
       attributes: true,
-      attributeFilter: ['class'],
+      attributeFilter: ["class"],
       attributeOldValue: true,
       characterData: false,
       characterDataOldValue: false,
     });
   }
 }, {
-  extends: 'body',
+  extends: "body",
 });
 
 // A custom element that acts like the new `<portal>` element.
 // Content in its light DOM are kept as is, but wrapped with an `<a>` inside
-// the shadow DOM. Scoped styles also prevent user interaction to content.s
-window.customElements.define('vscode-portal', class extends HTMLElement {
-  constructor() {
-    // Always call super first in constructor
-    super();
+// the shadow DOM. Scoped styles also prevent user interaction to content.
+function constructPortal() {
+  // Create a shadow root
+  const shadowRoot = this.attachShadow({
+    // Keeps the shadow root open so we can query elements
+    // inside it for event binding.
+    mode: "open",
+  }); // sets and returns `this.shadowRoot`
 
-    const template = /** @type {HTMLTemplateElement} */ (document.getElementById('tailwind-editor-template'));
-    // Create a shadow root
-    const shadowRoot = this.attachShadow({
-      // Keeps the shadow root open so we can query elements
-      // inside it for event binding.
-      mode: 'open',
-    }); // sets and returns `this.shadowRoot`
+  const style = document.createElement("style");
+  const link = document.createElement("a");
+  const slot = document.createElement("slot");
 
-    const style = document.createElement('style');
-    const link = document.createElement('a');
-    const slot = document.createElement('slot');
+  style.innerHTML = `
+    :host {
+      display: block;
+    }
+    :host(:hover) {
+      outline: 1px dotted;
+    }
+    :host > a {
+      display: block;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    ::slotted(*) {
+      pointer-events: none;
+      user-select: none;
+    }
+  `;
 
-    style.innerHTML = `
-      :host {
-        display: block;
-      }
-      :host(:hover) {
-        outline: 1px dotted;
-      }
-      :host > a {
-        display: block;
-        cursor: pointer;
-        text-decoration: none;
-      }
-      ::slotted(*) {
-        pointer-events: none;
-        user-select: none;
-      }
-    `;
+  link.setAttribute("href", this.getAttribute("src"));
 
-    link.setAttribute('href', this.getAttribute('src'));
+  shadowRoot.appendChild(style);
+  shadowRoot.appendChild(link);
+  link.appendChild(slot);
+}
 
-    shadowRoot.appendChild(style);
-    shadowRoot.appendChild(link);
-    link.appendChild(slot);
-  }
-});
+/** A mapping of tagName to JS class that extends HTMElement. */
+const elements = {
+  "a": HTMLAnchorElement,
+  "area": HTMLAreaElement,
+  "audio": HTMLAudioElement,
+  "body": HTMLBodyElement,
+  "button": HTMLButtonElement,
+  "canvas": HTMLCanvasElement,
+  "data": HTMLDataElement,
+  "datalist": HTMLDataListElement,
+  "details": HTMLDetailsElement,
+  "dialog": HTMLDialogElement,
+  "div": HTMLDivElement,
+  "dl": HTMLDListElement,
+  "embed": HTMLEmbedElement,
+  "fieldset": HTMLFieldSetElement,
+  "form": HTMLFormElement,
+  "head": HTMLHeadElement,
+  "hgroup": HTMLHRElement,
+  "hr": HTMLHRElement,
+  "html": HTMLHtmlElement,
+  "iframe": HTMLIFrameElement,
+  "img": HTMLImageElement,
+  "input": HTMLInputElement,
+  "label": HTMLLabelElement,
+  "legend": HTMLLegendElement,
+  "link": HTMLLinkElement,
+  "map": HTMLMapElement,
+  "meta": HTMLMetaElement,
+  "meter": HTMLMeterElement,
+  "object": HTMLObjectElement,
+  "ol": HTMLOListElement,
+  "optgroup": HTMLOptGroupElement,
+  "option": HTMLOptionElement,
+  "output": HTMLOutputElement,
+  "p": HTMLParagraphElement,
+  "param": HTMLParamElement,
+  "picture": HTMLPictureElement,
+  "pre": HTMLPreElement,
+  "progress": HTMLProgressElement,
+  "q": HTMLQuoteElement,
+  "script": HTMLScriptElement,
+  "select": HTMLSelectElement,
+  "source": HTMLSourceElement,
+  "span": HTMLSpanElement,
+  "style": HTMLStyleElement,
+  "table": HTMLTableElement,
+  "tbody": HTMLTableSectionElement,
+  "textarea": HTMLTextAreaElement,
+  "tfoot": HTMLTableSectionElement,
+  "thead": HTMLTableSectionElement,
+  "time": HTMLTimeElement,
+  "title": HTMLTitleElement,
+  "tr": HTMLTableRowElement,
+  "track": HTMLTrackElement,
+  "ul": HTMLUListElement,
+  "video": HTMLVideoElement,
+};
+
+/** Queries custom portals on the page so we can create custom element for them. */
+const portals = document.evaluate(
+  "//*[starts-with(@is,'portal-')]",
+  document.body,
+  null,
+  XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+  null
+);
+
+for (let i=0, l=portals.snapshotLength; i<l; i++) {
+  const portal = /** @type {HTMLElement} **/(portals.snapshotItem(i));
+  const [, tagName] = (portal.getAttribute("is") || "").split("-");
+  /** @type { CustomElementConstructor } */
+  const Element = elements[tagName] || HTMLElement;
+  /** @type { CustomElementConstructor } */
+  const constructor = class extends Element {
+    constructor() {
+      // Always call super first in constructor
+      super();
+      constructPortal.call(this);
+    }
+  };
+
+  customElements.define(`portal-${ tagName }`, constructor, {
+    extends: tagName,
+  });
+}
 
 /**
  * Render the document in the webview.
  */
 function updateContent(/** @type {string} */ content) {
-  const newDocument = new DOMParser().parseFromString(content, 'text/html');
+  const newDocument = new DOMParser().parseFromString(content, "text/html");
 
   // @ts-ignore
   // Morphs the DOM with the new changes only.
@@ -133,10 +214,10 @@ function updateContent(/** @type {string} */ content) {
   });
 }
 
-window.addEventListener('message', event => {
+window.addEventListener("message", event => {
   const message = event.data; // The json data that the extension sent
   switch (message.type) {
-    case 'update':
+    case "update":
       const content = message.content;
 
       // Update our webview's content

@@ -236,7 +236,7 @@ export class TailwindEditor implements CustomTextEditorProvider {
             includeUri
           ];
           const commandUri = Uri.parse(`command:tailwind.editor.open?${encodeURIComponent(JSON.stringify(args))}`);
-          return html.replace(/<([a-z-]+) /, `<vscode-portal is="$1" src="${commandUri}" `);
+          return html.replace(/<([a-z-]+) /, `<$1 is="portal-$1" src="${commandUri}" `);
         });
       promises.push(Promise.resolve(thenable));
 

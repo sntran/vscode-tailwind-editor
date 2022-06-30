@@ -108,10 +108,13 @@ function constructPortal() {
   `;
 
   link.setAttribute("href", this.getAttribute("src"));
+  this.removeAttribute("src");
 
   shadowRoot.appendChild(style);
   shadowRoot.appendChild(link);
   link.appendChild(slot);
+
+  this.removeAttribute("is");
 }
 
 /** A mapping of tagName to JS class that extends HTMElement. */

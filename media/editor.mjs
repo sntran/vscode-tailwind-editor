@@ -118,62 +118,26 @@ function constructPortal() {
 }
 
 /** A mapping of tagName to JS class that extends HTMElement. */
+/** Only [elements that can have shadow root](https://developer.mozilla.org/en-US/docs/Web/API/Element/attachShadow#elements_you_can_attach_a_shadow_to) */
 const elements = {
-  "a": HTMLAnchorElement,
-  "area": HTMLAreaElement,
-  "audio": HTMLAudioElement,
+  "article": HTMLElement,
+  "aside": HTMLElement,
+  "blockquote": HTMLElement,
   "body": HTMLBodyElement,
-  "button": HTMLButtonElement,
-  "canvas": HTMLCanvasElement,
-  "data": HTMLDataElement,
-  "datalist": HTMLDataListElement,
-  "details": HTMLDetailsElement,
-  "dialog": HTMLDialogElement,
   "div": HTMLDivElement,
-  "dl": HTMLDListElement,
-  "embed": HTMLEmbedElement,
-  "fieldset": HTMLFieldSetElement,
-  "form": HTMLFormElement,
-  "head": HTMLHeadElement,
-  "hgroup": HTMLHRElement,
-  "hr": HTMLHRElement,
-  "html": HTMLHtmlElement,
-  "iframe": HTMLIFrameElement,
-  "img": HTMLImageElement,
-  "input": HTMLInputElement,
-  "label": HTMLLabelElement,
-  "legend": HTMLLegendElement,
-  "link": HTMLLinkElement,
-  "map": HTMLMapElement,
-  "meta": HTMLMetaElement,
-  "meter": HTMLMeterElement,
-  "object": HTMLObjectElement,
-  "ol": HTMLOListElement,
-  "optgroup": HTMLOptGroupElement,
-  "option": HTMLOptionElement,
-  "output": HTMLOutputElement,
+  "footer": HTMLElement,
+  "h1": HTMLHeadingElement,
+  "h2": HTMLHeadingElement,
+  "h3": HTMLHeadingElement,
+  "h4": HTMLHeadingElement,
+  "h5": HTMLHeadingElement,
+  "h6": HTMLHeadingElement,
+  "header": HTMLElement,
+  "main": HTMLElement,
+  "nav": HTMLElement,
   "p": HTMLParagraphElement,
-  "param": HTMLParamElement,
-  "picture": HTMLPictureElement,
-  "pre": HTMLPreElement,
-  "progress": HTMLProgressElement,
-  "q": HTMLQuoteElement,
-  "script": HTMLScriptElement,
-  "select": HTMLSelectElement,
-  "source": HTMLSourceElement,
+  "section": HTMLElement,
   "span": HTMLSpanElement,
-  "style": HTMLStyleElement,
-  "table": HTMLTableElement,
-  "tbody": HTMLTableSectionElement,
-  "textarea": HTMLTextAreaElement,
-  "tfoot": HTMLTableSectionElement,
-  "thead": HTMLTableSectionElement,
-  "time": HTMLTimeElement,
-  "title": HTMLTitleElement,
-  "tr": HTMLTableRowElement,
-  "track": HTMLTrackElement,
-  "ul": HTMLUListElement,
-  "video": HTMLVideoElement,
 };
 
 /** Queries custom portals on the page so we can create custom element for them. */
@@ -189,9 +153,16 @@ for (let i=0, l=portals.snapshotLength; i<l; i++) {
   const portal = /** @type {HTMLElement} **/(portals.snapshotItem(i));
   const [, tagName] = (portal.getAttribute("is") || "").split("-");
   /** @type { CustomElementConstructor } */
-  const Element = elements[tagName] || HTMLElement;
+  const HTMLElement = elements[tagName];
+
+  if (!HTMLElement) {
+    portal.removeAttribute("is");
+    portal.removeAttribute("src");
+    continue;
+  };
+
   /** @type { CustomElementConstructor } */
-  const constructor = class extends Element {
+  const constructor = class extends HTMLElement {
     constructor() {
       // Always call super first in constructor
       super();
